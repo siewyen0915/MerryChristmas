@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 圣诞树</title>
+    <!-- 引入艺术字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0f0505;
+            font-family: 'Ma Shan Zheng', cursive; /* 全局使用艺术字体 */
+            transition: background-color 1s ease;
+        }
+        canvas {
+            display: block;
+        }
+        
+        /* --- 侧边导航栏样式 --- */
+        #nav-container {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .style-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .style-dot:hover {
+            transform: scale(1.3);
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+
+        .style-dot.active {
+            transform: scale(1.5);
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+        }
+        
+        /* --- 提示文字样式美化 --- */
+        .style-dot::after {
+            content: attr(data-label);
+            position: absolute;
+            left: 35px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            letter-spacing: 1px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .style-dot:hover::after {
+            opacity: 1;
+            left: 30px;
+        }
+
+        /* --- 右上角控制面板 (可爱风格) --- */
+        #control-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            user-select: none;
+            min-width: 160px;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-size: 18px; /* 字体调大 */
+            letter-spacing: 2px;
+            transition: transform 0.2s;
+        }
+        
+        .toggle-item:hover {
+            transform: translateX(-2px);
+            text-shadow: 0 0 8px rgba(255,255,255,0.6);
+        }
+
+        /* --- 可爱的圣诞树开关 CSS --- */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555; /* 关闭时的颜色 */
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* 开关里的小树图标 */
+        .slider:before {
+            position: absolute;
+            content: "🎄";  /* 使用Emoji作为按钮 */
+            height: 26px;
+            width: 26px;
+            left: 0px;
+            bottom: 1px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: .4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* 增加一点回弹效果 */
+            filter: grayscale(100%); /* 关闭时是灰色的树 */
+            opacity: 0.7;
+        }
+
+        input:checked + .slider {
+            background-color: #4CAF50; /* 开启时的绿色背景 */
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px) rotate(360deg); /* 开启时小树会转一圈滑过去 */
+            filter: grayscale(0%); /* 开启时变成彩色 */
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- 侧边导航 -->
+<div id="nav-container"></div>
+
+<!-- 控制面板 -->
+<div id="control-panel">
+    <label class="toggle-item">
+        <span>树叶</span>
+        <div class="switch">
+            <input type="checkbox" checked id="toggle-leaves">
+            <span class="slider"></span>
+        </div>
+    </label>
+    <label class="toggle-item">
+        <span>树干</span>
+        <div class="switch">
+            <input type="checkbox" checked id="toggle-trunk">
+            <span class="slider"></span>
+        </div>
+    </label>
+    <label class="toggle-item">
+        <span>丝带</span>
+        <div class="switch">
+            <input type="checkbox" checked id="toggle-ribbon">
+            <span class="slider"></span>
+        </div>
+    </label>
+    <label class="toggle-item">
+        <span>装饰</span> <!-- 合并开关 -->
+        <div class="switch">
+            <input type="checkbox" checked id="toggle-decor">
+            <span class="slider"></span>
+        </div>
+    </label>
+    <label class="toggle-item">
+        <span>文字</span>
+        <div class="switch">
+            <input type="checkbox" checked id="toggle-text">
+            <span class="slider"></span>
+        </div>
+    </label>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+/**
+ * 配置 Styles
+ */
+const styles = {
+    "1": {
+        label: "经典金",
+        bg_col: "#0f0505", tree_cols: ["#0B3D0B", "#144514", "#006400"],
+        trunk_col: "#3e2723", decor_cols: ["#FFD700", "#CCA43B", "#8B0000"],
+        star_col: "#FFD700", text_col: "#FFD700", snow_col: "white",
+        ribbon: true, ribbon_col: "#D4AF37", ribbon_width: 1.5
+    },
+    "2": {
+        label: "冰雪蓝",
+        bg_col: "#0f0505", tree_cols: ["#2F4F4F", "#5F9EA0", "#708090"],
+        trunk_col: "#696969", decor_cols: ["#B0C4DE", "#FFFAF0", "#E0FFFF"],
+        star_col: "#B0C4DE", text_col: "#a1eafb", snow_col: "#87CEFA",
+        ribbon: true, ribbon_col: "#B0C4DE", ribbon_width: 1.5
+    },
+    "3": {
+        label: "大地色",
+        bg_col: "#1a1a1a", tree_cols: ["#556B2F", "#6B8E23", "#808000"],
+        trunk_col: "#5D4037", decor_cols: ["#CD853F", "#FFCC00"],
+        star_col: "#FFCC00", text_col: "#DEB887", snow_col: "white",
+        ribbon: true, ribbon_col: "#CD853F", ribbon_width: 1
+    },
+    "4": {
+        label: "霓虹夜",
+        bg_col: "#101010", tree_cols: ["#006400", "#228B22"],
+        trunk_col: "#4E342E", decor_cols: ["#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+        star_col: "#FFD700", text_col: "#FFD700", snow_col: "white",
+        ribbon: true, ribbon_col: "#C0C0C0", ribbon_width: 1.0
+    },
+    "5": {
+        label: "极简黑白",
+        bg_col: "#000000", tree_cols: ["#111111", "#FCFFF5"],
+        trunk_col: "#222222", decor_cols: ["#FFFFFF", "#FFFFE0"],
+        star_col: "#FFFFFF", text_col: "#FFFFFF", snow_col: "gray",
+        ribbon: true, ribbon_col: "#FFFFFF", ribbon_width: 0.8
+    },
+    "6": {
+        label: "粉色浪漫",
+        bg_col: "#1F0F12", tree_cols: ["#D87093", "#FF69B4", "#FFB6C1"],
+        trunk_col: "#4A3728", decor_cols: ["#FFFFFF", "#FFD700", "#FF1493"],
+        star_col: "#FFD700", text_col: "#FFC0CB", snow_col: "#FFF0F5",
+        ribbon: true, ribbon_col: "#F8F8FF", ribbon_width: 0.8
+    },
+    "7": {
+        label: "紫罗兰",
+        bg_col: "#0f0524", tree_cols: ["#b7c3e4", "#7aa4ce", "#c0b6f9"],
+        trunk_col: "#4d3f23", decor_cols: ["#173f7b", "#5a8fc4", "#ffffff", "#FFD700"],
+        star_col: "#FFD700", text_col: "#BAC4FF", snow_col: "white",
+        ribbon: true, ribbon_col: "#5a8fc4", ribbon_width: 0.8
+    },
+    "8": {
+        label: "抹茶拿铁",
+        bg_col: "#0e1410", tree_cols: ["#7DA374", "#A8C69F", "#5D7D54"],
+        trunk_col: "#463E3F", decor_cols: ["#FDF5E6", "#FFB7B2", "#FFF0F5"],
+        star_col: "#FDF5E6", text_col: "#8DB870", snow_col: "white",
+        ribbon: true, ribbon_col: "#FDF5E6", ribbon_width: 1.2
+    },
+    "9": {
+        label: "奢华金",
+        bg_col: "#080808", tree_cols: ["#d4af37", "#c5a028", "#b8860b"],
+        trunk_col: "#332200", decor_cols: ["#ffffff", "#fffacd", "#ffd700"],
+        star_col: "#ffffff", text_col: "#E5AE07", snow_col: "#f0e68c",
+        ribbon: true, ribbon_col: "#ffed8b", ribbon_width: 1.1
+    },
+    "10": {
+        label: "独角兽",
+        bg_col: "#1a1624", tree_cols: ["#aa96da", "#a8d8ea", "#b8a4e6"],
+        trunk_col: "#483d5e", decor_cols: ["#ffffd2", "#fcbad3", "#ffffff"],
+        star_col: "#cca8e9", text_col: "#D5A5FA", snow_col: "#f0f8ff",
+        ribbon: true, ribbon_col: "#fcbad3", ribbon_width: 1.1
+    }
+};
+
+// --- 全局显示控制 ---
+const displayConfig = {
+    showLeaves: true,
+    showTrunk: true,
+    showDecor: true,  
+    showRibbon: true,
+    showText: true 
+};
+
+// 绑定事件监听器
+document.getElementById('toggle-leaves').addEventListener('change', (e) => displayConfig.showLeaves = e.target.checked);
+document.getElementById('toggle-trunk').addEventListener('change', (e) => displayConfig.showTrunk = e.target.checked);
+document.getElementById('toggle-decor').addEventListener('change', (e) => displayConfig.showDecor = e.target.checked);
+document.getElementById('toggle-ribbon').addEventListener('change', (e) => displayConfig.showRibbon = e.target.checked);
+document.getElementById('toggle-text').addEventListener('change', (e) => displayConfig.showText = e.target.checked);
+
+
+// 构建 UI
+const navContainer = document.getElementById('nav-container');
+Object.keys(styles).forEach(key => {
+    const style = styles[key];
+    const dot = document.createElement('div');
+    dot.className = 'style-dot';
+    dot.style.backgroundColor = style.tree_cols[0];
+    dot.setAttribute('data-id', key);
+    dot.setAttribute('data-label', style.label); // 显示中文标签
+    
+    dot.addEventListener('click', () => {
+        document.querySelectorAll('.style-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        initScene(key);
+    });
+    
+    navContainer.appendChild(dot);
+});
+document.querySelector('.style-dot[data-id="1"]').classList.add('active');
+
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let snowParticles = [];
+let width, height;
+let currentStyle = styles["1"];
+
+// 辅助函数
+const runif = (min, max) => Math.random() * (max - min) + min;
+const sample = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function generateData(cfg) {
+    let data = [];
+    
+    // 1. Trunk (树干)
+    const n_trunk = 1000;
+    for(let i=0; i<n_trunk; i++) {
+        let h = runif(-0.7, -0.45);
+        let r = 0.12;
+        let theta = runif(0, 2 * Math.PI);
+        data.push({
+            x: r * Math.cos(theta), y: h, z: r * Math.sin(theta),
+            col: cfg.trunk_col, size: 1.2, type: 'trunk', alpha: 1
+        });
+    }
+
+    // 2. Leaves (树叶)
+    const n_leaves = 8000;
+    for(let i=0; i<n_leaves; i++) {
+        let h = runif(0, 1);
+        let base_r = 1 - h;
+        let layer_cycle = (h * 7) % 1;
+        let r = base_r * 0.65 * (0.4 + 0.6 * Math.pow(1 - layer_cycle, 0.7));
+        let theta = runif(0, 2 * Math.PI);
+        
+        data.push({
+            x: r * Math.cos(theta), y: h - 0.5, z: r * Math.sin(theta),
+            col: sample(cfg.tree_cols), size: runif(0.6, 1.8), type: 'tree', alpha: 0.95
+        });
+    }
+
+    // 3. Decorations (装饰)
+    const n_decor = 600;
+    for(let i=0; i<n_decor; i++) {
+        let h = runif(0, 0.95);
+        let base_r = 1 - h;
+        let layer_cycle = (h * 7) % 1;
+        let r = base_r * 0.68 * (0.4 + 0.6 * Math.pow(1 - layer_cycle, 0.7));
+        let theta = runif(0, 2 * Math.PI);
+
+        data.push({
+            x: r * Math.cos(theta), y: h - 0.5, z: r * Math.sin(theta),
+            col: sample(cfg.decor_cols), size: runif(2, 4), type: 'decor', alpha: 1
+        });
+    }
+
+    // 4. Ribbon (丝带)
+    if (cfg.ribbon) {
+        const n_rib = 6000;
+        for(let i=0; i<n_rib; i++) {
+            let h_val = i / (n_rib - 1) * 0.95; 
+            let base_r = (1 - h_val) * 0.65 * 1.05;
+            let theta = 10 * Math.PI * h_val;
+            
+            data.push({
+                x: base_r * Math.cos(theta), y: h_val - 0.5, z: base_r * Math.sin(theta),
+                col: cfg.ribbon_col, size: cfg.ribbon_width, type: 'ribbon', alpha: 1
+            });
+        }
+    }
+    return data;
+}
+
+function generateSnow(cfg) {
+    let snow = [];
+    const n_flakes = 250;
+    for(let i=0; i<n_flakes; i++) {
+        snow.push({
+            x: runif(-1, 1), y: runif(-0.8, 1.2), z: runif(-1, 1),
+            col: cfg.snow_col, size: runif(0.5, 2), speed: runif(0.002, 0.006),
+            type: 'snow', alpha: runif(0.5, 0.9)
+        });
+    }
+    return snow;
+}
+
+function initScene(styleId) {
+    currentStyle = styles[styleId];
+    document.body.style.backgroundColor = currentStyle.bg_col;
+    particles = generateData(currentStyle);
+    snowParticles = generateSnow(currentStyle);
+}
+
+function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius, color) {
+    let rot = Math.PI / 2 * 3;
+    let x = cx;
+    let y = cy;
+    let step = Math.PI / spikes;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outerRadius);
+    for (let i = 0; i < spikes; i++) {
+        x = cx + Math.cos(rot) * outerRadius;
+        y = cy + Math.sin(rot) * outerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+
+        x = cx + Math.cos(rot) * innerRadius;
+        y = cy + Math.sin(rot) * innerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+    }
+    ctx.lineTo(cx, cy - outerRadius);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+}
+
+function animate() {
+    ctx.clearRect(0, 0, width, height);
+    let angle = (Date.now() / 2000) % (2 * Math.PI);
+    
+    let renderList = [];
+    const dist = 2.5; 
+    const scaleFactor = Math.min(width, height) * 0.83;  //缩放树的比例
+    const treeCenterY = height * 0.45; //树的中心的位置
+
+    // --- 粒子渲染循环 ---
+    for (let p of particles) {
+        // 开关控制逻辑：如果未开启，直接跳过当前粒子
+        if (p.type === 'trunk' && !displayConfig.showTrunk) continue;
+        if (p.type === 'tree' && !displayConfig.showLeaves) continue;
+        if (p.type === 'decor' && !displayConfig.showDecor) continue;
+        if (p.type === 'ribbon' && !displayConfig.showRibbon) continue;
+
+        let x_rot = p.x * Math.cos(angle) - p.z * Math.sin(angle);
+        let z_rot = p.z * Math.cos(angle) + p.x * Math.sin(angle);
+        let depth = 1 / (dist - z_rot);
+        
+        let alpha_vis = p.alpha * ((z_rot + 1.2) / 2.2); 
+        if(alpha_vis < 0) alpha_vis = 0; if(alpha_vis > 1) alpha_vis = 1;
+
+        renderList.push({
+            x: width/2 + (x_rot * depth * 2) * scaleFactor, 
+            y: treeCenterY - (p.y * depth * 2) * scaleFactor, 
+            size: p.size * depth * 1.5 * (scaleFactor / 300), 
+            col: p.col, alpha: alpha_vis, depth: depth
+        });
+    }
+
+    // 雪花 (不受开关控制，始终显示)
+    for (let s of snowParticles) {
+        s.y -= s.speed;
+        if (s.y < -0.8) s.y = 1.2;
+        let depth = 1 / (dist - s.z);
+        renderList.push({
+            x: width/2 + (s.x * depth * 2) * scaleFactor,
+            y: treeCenterY - (s.y * depth * 2) * scaleFactor,
+            size: s.size * depth * 1.5 * (scaleFactor / 300),
+            col: s.col, alpha: s.alpha, depth: depth
+        });
+    }
+
+    renderList.sort((a, b) => a.depth - b.depth);
+
+    for (let p of renderList) {
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.col;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    ctx.globalAlpha = 1.0;
+
+    // --- 绘制星星 (受 'decor' 开关控制) ---
+    if (displayConfig.showDecor) {
+        let starX = 0;
+        let starY = 0.53; 
+        let starZ = 0;
+        
+        let s_x_rot = starX * Math.cos(angle) - starZ * Math.sin(angle);
+        let s_z_rot = starZ * Math.cos(angle) + starX * Math.sin(angle);
+        let s_depth = 1 / (dist - s_z_rot);
+        
+        let sx_proj = width/2 + (s_x_rot * s_depth * 2) * scaleFactor;
+        let sy_proj = treeCenterY - (starY * s_depth * 2) * scaleFactor; 
+        
+        let starRadius = 0.045 * s_depth * 2 * scaleFactor; 
+        drawStar(ctx, sx_proj, sy_proj, 5, starRadius, starRadius * 0.5, currentStyle.star_col);
+    }
+
+    // --- 绘制文字 (受 'text' 开关控制) ---
+    if (displayConfig.showText) {
+        const fontSize = Math.min(width, height) / 15;
+        ctx.font = `bold ${fontSize}px "Great Vibes", "Ma Shan Zheng", cursive`;
+        ctx.fillStyle = currentStyle.text_col;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        ctx.shadowBlur = 2;
+        ctx.shadowColor = currentStyle.text_col;
+        
+        const textLines = ["Merry Christmas"];
+        const lineHeight = fontSize * 1; 
+        const startY = height * 0.9; 
+
+        textLines.forEach((line, index) => {
+            ctx.fillText(line, width / 2, startY + (index * lineHeight));
+        });
+
+        ctx.shadowBlur = 0;
+    }
+
+    requestAnimationFrame(animate);
+}
+
+// 启动
+initScene("1");
+animate();
+
+</script>
+</body>
+</html>
